@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixel Assignment Part 2</title>
+  </head>
+  <body>
+    <script>
+      class Genes {
+        constructor(R, G, B, A) {
+          this.R = R;
+          this.G = G;
+          this.B = B;
+          this.A = A;
+        }
+      }
+
+      class Pixel {
+        constructor(parents, genes) {
+          this.genes = genes;
+          this.generation = 1;
+          this.children = [];
+          this.parents = parents;
+          this.ID = nextID;
+          nextID++;
+        }
+        // Pixel can try making children between 3-6 genertation, this finction will tell us if they are in the right genertaion
+        canHaveChildren() {
+          if (this.generation >= 3 && this.generation <= 6) {
+            return true;
+          }
+          return false;
+        }
+        // Calculate the didtance between 2 pixel's values for pixel mating preferences later
+        distanceBetween(otherPixel) {
+          let distance = 0;
+          distance += Math.abs(this.genes.R - otherPixel.genes.R);
+          distance += Math.abs(this.genes.G - otherPixel.genes.G);
+          distance += Math.abs(this.genes.B - otherPixel.genes.B);
+          return distance;
+        }
+        // Check if two pixels (children) have the same parents
+        isBrotherOf(otherPixel) {
+          let parents1, parents2;
+          parents1 = this.parents;
+          parents2 = otherPixel.parents;
+
+          if (parents1.length > 0 && parents2.length > 0) {
+            if (
+              parents1[0].ID === parents2[0].ID ||
+              parents1[0].ID === parents2[1].ID
+            ) {
+              return true;
+            }
+          }
+
+          return false;
+        }
+      }
+
+      // Create parent with random values
+      const randomGenes = a => {
+        const r = Math.floor(Math.random() * 255);
+        const g = Math.floor(Math.random() * 255);
+        const b = Math.floor(Math.random() * 255);
+        return new Genes(r, g, b, a);
+      };
+
+      // Pick random values from a minimum and maximum range
+      const randomGenerate = (min, max) => {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      };
+      // Create random gene
+      const randomGene = (gene1, gene2) => {
+        let min = Math.min(gene1, gene2);
+        let max = Math.max(gene1, gene2);
+        return randomGenerate(min, max);
+      };
+      // Create new child (baby pixel)
+      const newPixelBaby = (parent_one, parent_two) => {
+        // Odds to success creating baby are higher than not success
+        if (Math.random() > 0.3) {
+          let aGene = -1;
+          if (parent_one.genes.A >= 0 || parent_two.genes.A >= 0) {
+            aGene = Math.random();
+          }
+          // Get the genes from two parents and create mixture genes for the new child
+          let genes = new Genes(
+            randomGene(parent_one.genes.R, parent_two.genes.R),
+            randomGene(parent_one.genes.G, parent_two.genes.G),
+            randomGene(parent_one.genes.B, parent_two.genes.B),
+            aGene
+          );
+
+          let baby = new Pixel([parent_one, parent_two], genes);
+          parent_one.children.push(baby);
+          parent_two.children.push(baby);
+
+          return baby;
+        }
+
+        return null;
+      };
+      // Removing the dead pixels (after 8 generations) from the population
+      const updatePopulation = population => {
+        population.forEach(pixel => {
+          pixel.generation++;
+          if (pixel.generation > 8) {
+            pixel.kill = true;
+          }
+        });
+
+        return population.filter(pixel => {
+          return !pixel.kill;
+        });
+      };
+      // Find pixel in the right genertaion for making baby and never mate before
+      const pixelPair = population => {
+        let mateblePopulation = population.filter(pixel => {
+          return pixel.canHaveChildren() && !pixel.mate;
+        });
+        // Only pixels that can be mateble
+        mateblePopulation.forEach(pixel => {
+          let parentIndex1 = -1,
+            parentIndex2 = -1;
+          // Check that new parents are not the same person
+          while (parentIndex1 === parentIndex2) {
+            parentIndex1 = randomGenerate(0, population.length - 1);
+            parentIndex2 = randomGenerate(0, population.length - 1);
+          }
+
+          const pixel1 = population[parentIndex1];
+          const pixel2 = population[parentIndex2];
+          // Check that 2 mpixels don't have mets and that they aren't siblings
+          if (!pixel1.mate || (!pixel2.mate && !pixel1.isBrotherOf(pixel2))) {
+            // Mating either way - distance preference or last generation (6)
+            if (
+              pixel.generation === 6 ||
+              pixel1.distanceBetween(pixel2) > 383
+            ) {
+              pixel1.mate = pixel2;
+              pixel2.mate = pixel1;
+            }
+          }
+        });
+      };
+
+      const makeBabies = population => {
+        let canMakeBabyPopulation = population.filter(pixel => {
+          return pixel.canHaveChildren() && pixel.mate;
+        });
+        // Mark the tries of pixels that can make babies if success or just try and update accordingly
+        canMakeBabyPopulation.forEach(pixel => {
+          if (!pixel.triedMakingBaby) {
+            let baby = newPixelBaby(pixel, pixel.mate);
+
+            if (baby) {
+              population.push(baby);
+            }
+
+            pixel.triedMakingBaby = true;
+            pixel.mate.triedMakingBaby = true;
+          }
+        });
+        // Reseting the tries counter
+        canMakeBabyPopulation.forEach(pixel => {
+          pixel.triedMakingBaby = false;
+        });
+      };
+
+      let nextID = 1;
+      // The initial pixels (Adam & Eve)
+      const parent_one = new Pixel([], new Genes(0, 0, 0, -1));
+      const parent_two = new Pixel([], new Genes(255, 255, 255, Math.random()));
+      let population = [parent_one, parent_two];
+      const STAGES = 15;
+
+      for (let stage = 0; stage < STAGES; stage++) {
+        // Kill old pixels
+        population = updatePopulation(population);
+
+        // Try to mate pixels
+        pixelPair(population);
+
+        // Create new baby pixel
+        makeBabies(population);
+
+        console.log("Stage " + (stage + 1) + ": ");
+        console.log(population);
+      }
+    </script>
+  </body>
+</html>

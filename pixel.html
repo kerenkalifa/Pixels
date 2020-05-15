@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pixel Assignment</title>
+  </head>
+  <body>
+    <script>
+      const parent_one = randomPixel();
+      const parent_two = randomPixel();
+
+      // pick random values from a minimum and maximum range
+      const randomGenerate = (min, max) => {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      };
+
+      // create the new baby
+      const newPixelBaby = (parent_one, parent_two) => {
+        let newChild = [];
+        for (let i = 0; i < 3; i++) {
+          let min = Math.min(parent_one[i], parent_two[i]);
+          let max = Math.max(parent_one[i], parent_two[i]);
+          let childValue = randomGenerate(min, max);
+          newChild.push(childValue);
+        }
+        return newChild;
+      };
+
+      // this is where the population bagin
+      let population = [parent_one, parent_two];
+      console.log(`Parents : `);
+      console.log(population, "\n");
+
+      // choosing how meny stages of the population grows I want to see
+      let STAGES = 4;
+
+      for (let stage = 0; stage < STAGES; stage++) {
+        let parentIndex1 = -1,
+          parentIndex2 = -1;
+        console.log(`Population at stage ${stage + 1} :`);
+
+        // checking that new parents are not the same person
+        while (parentIndex1 === parentIndex2) {
+          parentIndex1 = randomGenerate(0, population.length - 1);
+          parentIndex2 = randomGenerate(0, population.length - 1);
+        }
+
+        let newChild = newPixelBaby(
+          population[parentIndex1],
+          population[parentIndex2]
+        );
+        population = [...population, newChild];
+        console.log(population, "\n");
+      }
+
+      // create parent with random values
+      function randomPixel() {
+        //pick a "red" from 0 - 255
+        var r = Math.floor(Math.random() * 256);
+        //pick a "green" from 0 - 255
+        var g = Math.floor(Math.random() * 256);
+        //pick a "blue" from 0 - 255
+        var b = Math.floor(Math.random() * 256);
+        return [r, g, b];
+      }
+    </script>
+  </body>
+</html>
